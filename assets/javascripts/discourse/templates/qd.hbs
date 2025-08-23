@@ -3,8 +3,8 @@
     <div class="qd-card">
       {{#if this.currentUser.admin}}
         <div class="qd-admin-debug">
-          <button class="debug-btn" {{on "click" this.syncAllScores}}>
-            🔄 同步积分
+          <button class="debug-btn" {{on "click" this.openAdminDebug}}>
+            🛠️ 管理员调试
           </button>
         </div>
       {{/if}}
@@ -22,7 +22,7 @@
           </div>
           <div class="qd-stat-item">
             <div class="qd-stat-value">{{this.model.total_score}}</div>
-            <div class="qd-stat-label">总积分</div>
+            <div class="qd-stat-label">可用积分</div>
           </div>
           <div class="qd-stat-item">
             <div class="qd-stat-value">{{this.model.consecutive_days}}</div>
@@ -51,7 +51,7 @@
             disabled={{or this.model.signed this.isLoading}}
           >
             {{#if this.isLoading}}
-              ⏳ 签到中...
+              ⏳ 处理中...
             {{else if this.model.signed}}
               ✅ 今日已签到
             {{else}}
@@ -132,10 +132,10 @@
       {{/if}}
     </div>
 
-    <!-- 新增：签到记录列表（按时间倒序） -->
+    <!-- 签到记录列表（最近 7 天，按时间倒序） -->
     {{#if this.model.user_logged_in}}
       <div class="qd-records-section">
-        <h4>🗓️ 签到记录</h4>
+        <h4>🗓️ 签到记录（最近 7 天）</h4>
         {{#if this.records.length}}
           <ul class="qd-records-list">
             {{#each this.records as |r|}}
@@ -162,3 +162,51 @@
     </div>
   </div>
 </div>
+
+{{!-- 管理员调试弹窗 --}}
+{{#if this.showDebugModal}}
+  <div class="debug-modal">
+    <div class="debug-content">
+      <h3>🛠️ 管理员调试（仅管理员）</h3>
+
+      <div class="debug-section">
+        <h4>手动调整积分</h4>
+        <div class="debug-form">
+          <Input @value={{this.adminUsernameAdjust}} placeholder="用户名，例如: alice" />
+          <Input @value={{this.adminDelta}} @type="number" placeholder="调整值（可正可负），例如：+10 或 -5" />
+          <button class="btn-warning" {{on "click" this.adjustPoints}} disabled={{this.isLoading}}>
+            {{if this.isLoading "处理中..." "保存并应用"}}
+          </button>
+        </div>
+      </div>
+
+      <div class="debug-section">
+        <h4>重置今日签到</h4>
+        <div class="debug-form">
+          <Input @value={{this.adminUsernameReset}} placeholder="用户名，例如: alice" />
+          <button class="btn-danger" {{on "click" this.resetToday}} disabled={{this.isLoading}}>
+            {{if this.isLoading "处理中..." "重置今日签到"}}
+          </button>
+        </div>
+      </div>
+
+      {{#if this.adminMessage}}
+        <div class="debug-section">
+          <h4>结果</h4>
+          <div>{{this.adminMessage}}</div>
+        </div>
+      {{/if}}
+
+      {{#if this.adminError}}
+        <div class="debug-section">
+          <h4>错误</h4>
+          <div>{{this.adminError}}</div>
+        </div>
+      {{/if}}
+
+      <div class="debug-close">
+        <button {{on "click" this.closeAdminDebug}}>关闭</button>
+      </div>
+    </div>
+  </div>
+{{/if}}

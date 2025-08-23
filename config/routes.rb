@@ -12,6 +12,8 @@ MyPluginModule::Engine.routes.draw do
   post "/makeup" => "qd#makeup"          # 补签（占位，后续可实现）
   post "/buy_makeup_card" => "qd#buy_makeup_card"  # 购买补签卡（占位，后续可实现）
 
-  # 管理端调试/同步（qd.hbs 中的“同步积分”按钮）
+  # 管理端调试/同步（qd.hbs 中的“管理员调试”）
   post "/admin/sync" => "admin#sync"
+  post "/admin/adjust_points" => "admin#adjust_points"
+  post "/admin/reset_today" => "admin#reset_today"
 end

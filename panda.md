@@ -669,3 +669,46 @@ end
 ---
 
 通过以上的技术实现，最终成功创建了一个完全可用的 `/panda` 路由，提供了完整的 Ember 单页应用体验。关键在于正确使用 Rails Engine 架构、现代化的 Ember v5.12.0 实现，以及 Glimmer Components 渲染系统。
+
+## 📦 数据库迁移（稳定方案·简版）
+
+为兼容不同 Discourse/ActiveRecord 版本并避免重复执行报错，采用如下规范：
+- 使用较早时间戳文件，例如：db/migrate/20240101000000_create_xxx.rb
+- 迁移基类建议 ActiveRecord::Migration[6.0]（兼容面更广）
+- 幂等创建：table_exists? / index_exists? 检查，避免重复建表/索引
+- 唯一索引显式命名，便于跨环境排错
+- 如存在较新时间戳的同名迁移，保留为空注释文件或重命名类，避免类名冲突
+- 业务侧日期判断用 Time.zone.today/Time.zone.yesterday，避免跨时区误判
+
+示例：独立签到表（含唯一索引与查询索引）
+```ruby
+# db/migrate/20240101000000_create_jifen_signins.rb
+# frozen_string_literal: true
+
+class CreateJifenSignins < ActiveRecord::Migration[6.0]
+  def up
+    unless table_exists?(:jifen_signins)
+      create_table :jifen_signins do |t|
+        t.integer  :user_id,      null: false
+        t.date     :date,         null: false
+        t.datetime :signed_at,    null: false
+        t.boolean  :makeup,       null: false, default: false
+        t.integer  :points,       null: false, default: 0
+        t.integer  :streak_count, null: false, default: 1
+        t.timestamps null: false
+      end
+    end
+
+    unless index_exists?(:jifen_signins, [:user_id, :date], name: "idx_jifen_signins_uid_date")
+      add_index :jifen_signins, [:user_id, :date], unique: true, name: "idx_jifen_signins_uid_date"
+    end
+
+    unless index_exists?(:jifen_signins, [:user_id, :created_at], name: "idx_jifen_signins_uid_created")
+      add_index :jifen_signins, [:user_id, :created_at], name: "idx_jifen_signins_uid_created"
+    end
+  end
+
+  def down
+    drop_table :jifen_signins if table_exists?(:jifen_signins)
+  end
+end

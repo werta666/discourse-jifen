@@ -33,6 +33,86 @@ module ::MyPluginModule
       MyPluginModule::JifenSignin.where(user_id: user_id, date: Time.zone.today).sum(:points)
     end
 
+    # 用户自定义字段：已消费积分与补签卡数量
+    def spent_points(user)
+      (user.custom_fields["jifen_spent"].presence || 0).to_i
+    end
+
+    def makeup_cards(user)
+      (user.custom_fields["jifen_makeup_cards"].presence || 0).to_i
+    end
+
+    def available_total_points(user)
+      total_points(user.id) - spent_points(user)
+    end
+
+    # 购买补签卡：扣减可用积分、增加补签卡数量，并返回最新概览
+    def purchase_makeup_card!(user)
+      price = SiteSetting.jifen_makeup_card_price.to_i
+      raise StandardError, "积分不足" if available_total_points(user) < price
+
+      user.custom_fields["jifen_makeup_cards"] = makeup_cards(user) + 1
+      user.custom_fields["jifen_spent"] = spent_points(user) + price
+      user.save_custom_fields(true)
+
+      summary_for(user)
+    end
+
+    # 手动调整积分（管理员）：delta>0 增加可用积分，delta<0 减少可用积分
+    # 通过调整 jifen_spent 实现，并写入后台操作日志
+    def adjust_points!(acting_user, target_user, delta)
+      d = delta.to_i
+      raise StandardError, "调整值不能为 0" if d == 0
+
+      before_spent = spent_points(target_user)
+      before_avail = available_total_points(target_user)
+
+      new_spent = before_spent - d
+      total = total_points(target_user.id)
+
+      # 约束：可用积分不为负 => new_spent <= total；且 new_spent >= 0
+      new_spent = 0 if new_spent < 0
+      new_spent = total if new_spent > total
+
+      target_user.custom_fields["jifen_spent"] = new_spent
+      target_user.save_custom_fields(true)
+
+      begin
+        StaffActionLogger.new(acting_user).log_custom(
+          "jifen_adjust_points",
+          target_user_id: target_user.id,
+          target_username: target_user.username,
+          delta: d,
+          before_spent: before_spent,
+          after_spent: new_spent,
+          before_available: before_avail,
+          after_available: available_total_points(target_user)
+        )
+      rescue StandardError
+        # 忽略日志异常
+      end
+
+      summary_for(target_user)
+    end
+
+    # 重置指定用户“今日签到”状态（删除今日记录），允许重新签到
+    def reset_today!(acting_user, target_user)
+      removed = MyPluginModule::JifenSignin.where(user_id: target_user.id, date: Time.zone.today).delete_all
+
+      begin
+        StaffActionLogger.new(acting_user).log_custom(
+          "jifen_reset_today",
+          target_user_id: target_user.id,
+          target_username: target_user.username,
+          removed: removed
+        )
+      rescue StandardError
+        # 忽略日志异常
+      end
+
+      removed
+    end
+
     # 用于 summary 展示的连续天数（若今天没签，取到昨日为止的连续天数）
     def compute_streak_on_summary(user_id)
       last = last_signin(user_id)
@@ -57,27 +137,47 @@ module ::MyPluginModule
       nil
     end
 
+    def recent_records_for(user_id, days: 7)
+      start_date = Time.zone.today - (days - 1)
+      MyPluginModule::JifenSignin
+        .where(user_id: user_id)
+        .where("date >= ?", start_date)
+        .order(date: :desc)
+        .limit(days)
+        .map do |r|
+          {
+            date: r.date.to_s,
+            signed_at: r.signed_at&.iso8601,
+            makeup: r.makeup,
+            points: r.points,
+            streak_count: r.streak_count
+          }
+        end
+    end
+
     def summary_for(user)
       uid = user.id
       signed = signed_today?(uid)
       streak = compute_streak_on_summary(uid)
-      total = total_points(uid)
+      total_available = available_total_points(user)
       today = today_points(uid)
       rewards = rewards_map
       next_rw = next_reward_info(streak, rewards)
-      install_date = MyPluginModule::JifenSignin.order(:date).limit(1).pluck(:date).first || Date.today
+      install_date = MyPluginModule::JifenSignin.order(:date).limit(1).pluck(:date).first || Time.zone.today
+      recent = recent_records_for(uid, days: 7)
 
       data = {
         user_logged_in: true,
         signed: signed,
         consecutive_days: streak,
-        total_score: total,
+        total_score: total_available,
         today_score: today,
         points: base_points,
-        makeup_cards: 0,
+        makeup_cards: makeup_cards(user),
         makeup_card_price: SiteSetting.jifen_makeup_card_price.to_i,
         install_date: install_date.to_s,
-        rewards: rewards
+        rewards: rewards,
+        recent_records: recent
       }
       data[:next_reward] = next_rw if next_rw
       data

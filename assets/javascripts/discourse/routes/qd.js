@@ -4,7 +4,7 @@ import { ajax } from "discourse/lib/ajax";
 export default class QdRoute extends Route {
   async model() {
     try {
-      // 加载概览数据
+      // 加载概览数据（后端已包含 recent_records：最近 7 天签到记录）
       return await ajax("/qd/summary.json");
     } catch (e) {
       // 未登录或接口不可用时，返回占位数据以渲染未登录分支
@@ -18,7 +18,8 @@ export default class QdRoute extends Route {
         makeup_cards: 0,
         makeup_card_price: 0,
         install_date: new Date().toISOString().slice(0, 10),
-        rewards: {}
+        rewards: {},
+        recent_records: []
       };
     }
   }
@@ -27,9 +28,14 @@ export default class QdRoute extends Route {
     super.setupController(controller, model);
     controller.model = model;
 
-    // 已登录则加载签到记录并计算缺勤天
     if (model.user_logged_in) {
-      await controller.loadRecords();
+      // 优先使用 summary 返回的最近 7 天记录，避免首屏“暂无记录”闪烁
+      controller.records = Array.isArray(model.recent_records) ? model.recent_records : [];
+      if (controller.records.length > 0) {
+        controller.missingDays = controller._computeRecentMissingDays(controller.records);
+      } else {
+        await controller.loadRecords();
+      }
     } else {
       controller.records = [];
       controller.missingDays = [];

@@ -11,6 +11,14 @@ export default class QdController extends Controller {
   @tracked records = [];
   @tracked missingDays = [];
 
+  // 管理员调试面板状态与表单
+  @tracked showDebugModal = false;
+  @tracked adminUsernameAdjust = "";
+  @tracked adminDelta = 0;
+  @tracked adminUsernameReset = "";
+  @tracked adminMessage = null;
+  @tracked adminError = null;
+
   // 奖励提示文本（基于设置中的 JSON 连续奖励与当前连续天数）
   get rewardText() {
     const rewards = this.model?.rewards || {};
@@ -30,7 +38,7 @@ export default class QdController extends Controller {
     return "继续保持签到，可解锁更高奖励";
   }
 
-  // 加载签到记录（倒序）
+  // 加载签到记录（倒序），后端已限制最近 7 天
   async loadRecords() {
     try {
       const data = await ajax("/qd/records.json");
@@ -74,13 +82,13 @@ export default class QdController extends Controller {
       this.model = data;
       await this.loadRecords();
     } catch {
-      // 保持静默，前端 UI 已有禁用态/提示
+      // 保持静默
     } finally {
       this.isLoading = false;
     }
   }
 
-  // 补签（占位：后端当前返回未开放）
+  // 补签（占位）
   @action
   async makeupSign(date) {
     try {
@@ -91,24 +99,107 @@ export default class QdController extends Controller {
     }
   }
 
-  // 购买补签卡（占位）
+  // 购买补签卡：扣积分并增加卡数，更新概览与记录
   @action
   async buyMakeupCard() {
+    if (this.isLoading) return;
+    this.isLoading = true;
     try {
-      await ajax("/qd/buy_makeup_card.json", { type: "POST" });
+      const data = await ajax("/qd/buy_makeup_card.json", { type: "POST" });
+      // 应用后端最新概览（可用积分、补签卡数、连续天数等）
+      this.model = data;
       await this.loadRecords();
     } catch {
-      // 占位
+      // 保持静默
+    } finally {
+      this.isLoading = false;
     }
   }
 
-  // 管理员调试：同步
+  // 管理员调试：打开/关闭弹窗
+  @action
+  openAdminDebug() {
+    this.adminMessage = null;
+    this.adminError = null;
+    this.showDebugModal = true;
+  }
+
+  @action
+  closeAdminDebug() {
+    this.showDebugModal = false;
+  }
+
+  // 管理员调试：手动调整积分（可增可减）
+  @action
+  async adjustPoints() {
+    if (this.isLoading) return;
+    this.adminMessage = null;
+    this.adminError = null;
+    this.isLoading = true;
+    try {
+      const resp = await ajax("/qd/admin/adjust_points.json", {
+        type: "POST",
+        data: {
+          username: this.adminUsernameAdjust,
+          delta: this.adminDelta
+        }
+      });
+      this.adminMessage = `已调整用户 ${resp.target_username} 的可用积分：${resp.before_available} → ${resp.after_available}`;
+      // 若调整的是当前登录用户，同步刷新概览（以服务器为准）
+      if (
+        this.model &&
+        this.currentUser &&
+        this.adminUsernameAdjust &&
+        this.adminUsernameAdjust.toLowerCase() === this.currentUser.username_lower
+      ) {
+        try {
+          this.model = await ajax("/qd/summary.json");
+        } catch {}
+      }
+    } catch (e) {
+      this.adminError = (e?.jqXHR?.responseJSON?.errors?.[0]) || e?.message || "调整失败";
+    } finally {
+      this.isLoading = false;
+    }
+  }
+
+  // 管理员调试：重置指定用户“今日签到”状态
+  @action
+  async resetToday() {
+    if (this.isLoading) return;
+    this.adminMessage = null;
+    this.adminError = null;
+    this.isLoading = true;
+    try {
+      const resp = await ajax("/qd/admin/reset_today.json", {
+        type: "POST",
+        data: {
+          username: this.adminUsernameReset
+        }
+      });
+      this.adminMessage = `已重置 ${resp.target_username} 的今日签到（删除记录：${resp.removed} 条）`;
+      // 如重置的是当前用户，刷新概览与记录
+      if (
+        this.model &&
+        this.currentUser &&
+        this.adminUsernameReset &&
+        this.adminUsernameReset.toLowerCase() === this.currentUser.username_lower
+      ) {
+        try {
+          this.model = await ajax("/qd/summary.json");
+          await this.loadRecords();
+        } catch {}
+      }
+    } catch (e) {
+      this.adminError = (e?.jqXHR?.responseJSON?.errors?.[0]) || e?.message || "重置失败";
+    } finally {
+      this.isLoading = false;
+    }
+  }
+
+  // 兼容旧按钮名（已改为开启调试面板）
   @action
   async syncAllScores() {
-    try {
-      await ajax("/qd/admin/sync.json", { type: "POST" });
-    } catch {
-      // 占位
-    }
+    this.openAdminDebug();
   }
 }

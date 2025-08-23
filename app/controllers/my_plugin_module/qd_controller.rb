@@ -16,12 +16,13 @@ module ::MyPluginModule
       render_json_dump MyPluginModule::JifenService.summary_for(current_user)
     end
 
-    # 签到记录（按时间倒序）
+    # 签到记录：仅返回最近 7 天（按日期倒序）
     def records
+      start_date = Time.zone.today - 6
       recs = MyPluginModule::JifenSignin
         .where(user_id: current_user.id)
+        .where("date >= ?", start_date)
         .order(date: :desc)
-        .limit(200)
 
       render_json_dump(
         records: recs.map do |r|
@@ -45,13 +46,16 @@ module ::MyPluginModule
       render_json_error(e.message)
     end
 
-    # 占位：补签与购买补签卡（后续可实现）
+    # 补签（占位）
     def makeup
       render_json_dump(ok: false, message: "补签功能暂未开放")
     end
 
+    # 购买补签卡：扣减可用积分并增加卡数，返回最新概览
     def buy_makeup_card
-      render_json_dump(ok: false, message: "购买补签卡暂未开放")
+      render_json_dump MyPluginModule::JifenService.purchase_makeup_card!(current_user)
+    rescue StandardError => e
+      render_json_error(e.message)
     end
   end
 end
