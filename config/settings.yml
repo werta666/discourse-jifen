@@ -1,4 +1,21 @@
-TODO_plugin_name:
-  plugin_name_enabled:
-    default: false
+jifen:
+  jifen_enabled:
+    default: true
     client: true
+    description: "启用积分系统插件"
+
+  jifen_base_points_per_signin:
+    default: 5
+    client: true
+    description: "每日签到基础积分"
+
+  jifen_consecutive_rewards_json:
+    default: '{"3":10,"5":20}'
+    client: true
+    type: text
+    description: "连续签到奖励（JSON），例如 {\"3\":10,\"5\":20}"
+
+  jifen_makeup_card_price:
+    default: 20
+    client: true
+    description: "补签卡价格（积分）"

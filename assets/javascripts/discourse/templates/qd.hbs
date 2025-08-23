@@ -131,6 +131,30 @@
         </div>
       {{/if}}
     </div>
+
+    <!-- 新增：签到记录列表（按时间倒序） -->
+    {{#if this.model.user_logged_in}}
+      <div class="qd-records-section">
+        <h4>🗓️ 签到记录</h4>
+        {{#if this.records.length}}
+          <ul class="qd-records-list">
+            {{#each this.records as |r|}}
+              <li class="qd-record-item">
+                <span class="qd-record-date">{{r.date}}</span>
+                <span class="qd-record-points">+{{r.points}} 分</span>
+                <span class="qd-record-makeup">{{if r.makeup "补签" "正常"}}</span>
+                <span class="qd-record-streak">连续：{{r.streak_count}} 天</span>
+                {{#if r.signed_at}}
+                  <span class="qd-record-time">{{r.signed_at}}</span>
+                {{/if}}
+              </li>
+            {{/each}}
+          </ul>
+        {{else}}
+          <div class="qd-no-records">暂无签到记录</div>
+        {{/if}}
+      </div>
+    {{/if}}
     
     <div class="qd-install-info">
       📅 签到系统于 {{this.model.install_date}} 正式启用<br>
@@ -138,5 +162,3 @@
     </div>
   </div>
 </div>
-
-
