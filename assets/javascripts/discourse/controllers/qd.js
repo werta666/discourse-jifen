@@ -19,6 +19,11 @@ export default class QdController extends Controller {
   @tracked adminMessage = null;
   @tracked adminError = null;
 
+  // 购买确认与反馈
+  @tracked showBuyConfirm = false;
+  @tracked buyMessage = null;
+  @tracked buyError = null;
+
   // 奖励提示文本（基于设置中的 JSON 连续奖励与当前连续天数）
   get rewardText() {
     const rewards = this.model?.rewards || {};
@@ -70,11 +75,19 @@ export default class QdController extends Controller {
       const signedSet = new Set((records || []).map((r) => r.date));
       const result = [];
       const today = new Date();
+      const installStr = this.model?.install_date;
+      const installDate = installStr ? new Date(installStr) : today;
 
       for (let i = 1; i <= 7; i++) {
         const d = new Date(today);
         d.setDate(today.getDate() - i);
         const s = d.toISOString().slice(0, 10);
+
+        // 仅允许系统启用日期（含）之后的日期可补签
+        if (installDate && d < installDate) {
+          continue;
+        }
+
         if (!signedSet.has(s)) {
           result.push({ date: s, formatted_date: s });
         }
@@ -113,21 +126,40 @@ export default class QdController extends Controller {
     }
   }
 
-  // 购买补签卡：扣积分并增加卡数，更新概览与记录
+  // 购买补签卡：先弹出二次确认，不直接下单
   @action
   async buyMakeupCard() {
     if (this.isLoading) return;
+    this.buyMessage = null;
+    this.buyError = null;
+    this.showBuyConfirm = true;
+  }
+
+  // 确认购买补签卡
+  @action
+  async confirmBuyMakeupCard() {
+    if (this.isLoading) return;
     this.isLoading = true;
+    this.buyMessage = null;
+    this.buyError = null;
     try {
       const data = await ajax("/qd/buy_makeup_card.json", { type: "POST" });
       // 应用后端最新概览（可用积分、补签卡数、连续天数等）
       this.model = data;
       await this.loadRecords();
-    } catch {
-      // 保持静默
+      this.buyMessage = "购买成功：已增加 1 张补签卡，并更新可用积分";
+      this.showBuyConfirm = false;
+    } catch (e) {
+      this.buyError = (e?.jqXHR?.responseJSON?.errors?.[0]) || e?.message || "购买失败";
     } finally {
       this.isLoading = false;
     }
+  }
+
+  // 取消购买
+  @action
+  cancelBuyConfirm() {
+    this.showBuyConfirm = false;
   }
 
   // 管理员调试：打开/关闭弹窗

@@ -216,5 +216,54 @@ module ::MyPluginModule
 
       summary_for(user)
     end
+
+    # 系统启用日期（用于限制补签下限）：取最早一条签到记录的日期；若无记录，则为今日
+    def install_date
+      MyPluginModule::JifenSignin.order(:date).limit(1).pluck(:date).first || Time.zone.today
+    end
+
+    # 补签指定日期：仅允许系统启用日（含）之后、且不晚于今日的日期；需要消耗 1 张补签卡
+    # 返回最新 summary（用于前端刷新）
+    def makeup_on_date!(user, date_str)
+      raise StandardError, "参数错误" if date_str.blank?
+      date = begin
+        Date.parse(date_str)
+      rescue ArgumentError
+        nil
+      end
+      raise StandardError, "日期格式不正确" unless date
+
+      today = Time.zone.today
+      inst = install_date
+      raise StandardError, "不能补签未来日期" if date > today
+      raise StandardError, "不能补签启用日期之前（#{inst}）" if date < inst
+
+      if MyPluginModule::JifenSignin.exists?(user_id: user.id, date: date)
+        raise StandardError, "该日期已存在签到记录"
+      end
+
+      cards = makeup_cards(user)
+      raise StandardError, "补签卡不足" if cards <= 0
+
+      # 补签默认仅给予基础积分，不叠加连续奖励，避免复杂跨日连贯重算
+      pts = base_points
+
+      ActiveRecord::Base.transaction do
+        # 扣 1 张补签卡
+        user.custom_fields["jifen_makeup_cards"] = cards - 1
+        user.save_custom_fields(true)
+
+        MyPluginModule::JifenSignin.create!(
+          user_id: user.id,
+          date: date,
+          signed_at: Time.zone.now,
+          makeup: true,
+          points: pts,
+          streak_count: 1
+        )
+      end
+
+      summary_for(user)
+    end
   end
 end

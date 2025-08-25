@@ -112,13 +112,27 @@
             </div>
             <button class="qd-buy-btn" {{on "click" this.buyMakeupCard}}
                     disabled={{this.insufficientPoints}}>
-              {{#if (lt this.model.total_score this.model.makeup_card_price)}}
+              {{#if this.insufficientPoints}}
                 积分不足
               {{else}}
                 购买
               {{/if}}
             </button>
           </div>
+          
+          {{#if this.buyMessage}}
+            <div class="qd-buy-message success">
+              <span class="qd-buy-icon">✅</span>
+              <span class="qd-buy-text">{{this.buyMessage}}</span>
+            </div>
+          {{/if}}
+          
+          {{#if this.buyError}}
+            <div class="qd-buy-message error">
+              <span class="qd-buy-icon">❌</span>
+              <span class="qd-buy-text">{{this.buyError}}</span>
+            </div>
+          {{/if}}
         </div>
       {{else}}
         <div class="qd-sign-section">
@@ -162,6 +176,30 @@
     </div>
   </div>
 </div>
+
+{{!-- 购买补签卡确认弹窗 --}}
+{{#if this.showBuyConfirm}}
+  <div class="qd-confirm-modal">
+    <div class="qd-confirm-content">
+      <h3>确认购买</h3>
+      <p>您确定要使用 <strong>{{this.model.makeup_card_price}} 积分</strong> 购买 <strong>1 张补签卡</strong> 吗？</p>
+      <p class="qd-confirm-note">购买后可用于补签缺勤日期，每次补签消耗 1 张补签卡</p>
+      
+      <div class="qd-confirm-buttons">
+        <button class="qd-confirm-cancel" {{on "click" this.cancelBuyConfirm}} disabled={{this.isLoading}}>
+          取消
+        </button>
+        <button class="qd-confirm-ok" {{on "click" this.confirmBuyMakeupCard}} disabled={{this.isLoading}}>
+          {{#if this.isLoading}}
+            处理中...
+          {{else}}
+            确认购买
+          {{/if}}
+        </button>
+      </div>
+    </div>
+  </div>
+{{/if}}
 
 {{!-- 管理员调试弹窗 --}}
 {{#if this.showDebugModal}}

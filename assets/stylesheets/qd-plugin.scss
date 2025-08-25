@@ -5,6 +5,7 @@
   min-height: 60vh;
   padding: 20px;
   background: var(--primary-very-low);
+  position: relative; /* 为弹窗定位提供参考 */
 }
 
 .qd-container {
@@ -340,6 +341,35 @@
       }
     }
   }
+  
+  // 购买结果反馈
+  .qd-buy-message {
+    margin-top: 12px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    animation: fadeIn 0.3s ease-in-out;
+    
+    &.success {
+      background: rgba(76, 175, 80, 0.2);
+      border: 1px solid rgba(76, 175, 80, 0.4);
+    }
+    
+    &.error {
+      background: rgba(244, 67, 54, 0.2);
+      border: 1px solid rgba(244, 67, 54, 0.4);
+    }
+    
+    .qd-buy-icon {
+      margin-right: 8px;
+      font-size: 14px;
+    }
+    
+    .qd-buy-text {
+      font-size: 12px;
+    }
+  }
 }
 
 // 管理员调试按钮
@@ -532,6 +562,95 @@
   }
 }
 
+// 购买确认弹窗
+.qd-confirm-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10000;
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+.qd-confirm-content {
+  background: var(--secondary-very-high);
+  border-radius: 8px;
+  padding: 24px;
+  max-width: 320px;
+  width: 90%;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  
+  h3 {
+    margin: 0 0 16px 0;
+    color: var(--primary);
+    font-size: 18px;
+    text-align: center;
+  }
+  
+  p {
+    margin: 0 0 8px 0;
+    color: var(--primary);
+    font-size: 14px;
+    text-align: center;
+    
+    strong {
+      color: var(--tertiary);
+    }
+  }
+  
+  .qd-confirm-note {
+    font-size: 12px;
+    color: var(--primary-medium);
+    margin-bottom: 20px;
+    text-align: center;
+  }
+  
+  .qd-confirm-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    
+    button {
+      padding: 8px 16px;
+      border-radius: 4px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      
+      &.qd-confirm-cancel {
+        background: var(--primary-low);
+        color: var(--primary);
+        border: 1px solid var(--primary-low-mid);
+        
+        &:hover {
+          background: var(--primary-low-mid);
+        }
+      }
+      
+      &.qd-confirm-ok {
+        background: var(--tertiary);
+        color: white;
+        border: none;
+        
+        &:hover {
+          background: var(--tertiary-hover);
+        }
+      }
+      
+      &:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+    }
+  }
+}
+
 // 响应式设计
 @media (max-width: 480px) {
   .qd-page {
@@ -565,4 +684,9 @@
       display: none;
     }
   }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }

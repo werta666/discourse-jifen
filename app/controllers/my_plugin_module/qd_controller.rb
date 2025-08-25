@@ -46,9 +46,12 @@ module ::MyPluginModule
       render_json_error(e.message)
     end
 
-    # 补签（占位）
+    # 补签：仅允许系统启用日（含）之后、且不晚于今日的日期；消耗 1 张补签卡
     def makeup
-      render_json_dump(ok: false, message: "补签功能暂未开放")
+      summary = MyPluginModule::JifenService.makeup_on_date!(current_user, params[:date])
+      render_json_dump(summary)
+    rescue StandardError => e
+      render_json_error(e.message)
     end
 
     # 购买补签卡：扣减可用积分并增加卡数，返回最新概览
