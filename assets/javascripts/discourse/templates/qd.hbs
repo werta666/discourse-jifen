@@ -83,8 +83,8 @@
                   <div class="qd-day-date">{{day.formatted_date}}</div>
                   <button class="qd-makeup-btn" 
                           {{on "click" (fn this.makeupSign day.date)}}
-                          disabled={{le this.model.makeup_cards 0}}>
-                    {{#if (le this.model.makeup_cards 0)}}
+                          disabled={{this.noMakeupCards}}>
+                    {{#if this.noMakeupCards}}
                       无卡
                     {{else}}
                       补签
@@ -111,7 +111,7 @@
               <div class="qd-item-price">{{this.model.makeup_card_price}} 积分</div>
             </div>
             <button class="qd-buy-btn" {{on "click" this.buyMakeupCard}}
-                    disabled={{lt this.model.total_score this.model.makeup_card_price}}>
+                    disabled={{this.insufficientPoints}}>
               {{#if (lt this.model.total_score this.model.makeup_card_price)}}
                 积分不足
               {{else}}

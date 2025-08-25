@@ -38,6 +38,20 @@ export default class QdController extends Controller {
     return "继续保持签到，可解锁更高奖励";
   }
 
+  // 新增：避免模板依赖 lt/le helper，直接提供布尔字段
+  get noMakeupCards() {
+    const m = this.model || {};
+    const count = Number(m.makeup_cards || 0);
+    return count <= 0;
+  }
+
+  get insufficientPoints() {
+    const m = this.model || {};
+    const total = Number(m.total_score || 0);
+    const price = Number(m.makeup_card_price || 0);
+    return total < price;
+  }
+
   // 加载签到记录（倒序），后端已限制最近 7 天
   async loadRecords() {
     try {
