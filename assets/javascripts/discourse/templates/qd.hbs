@@ -100,6 +100,20 @@
           {{/if}}
         </div>
 
+        {{#if this.makeupMessage}}
+          <div class="qd-buy-message success">
+            <span class="qd-buy-icon">✅</span>
+            <span class="qd-buy-text">{{this.makeupMessage}}</span>
+          </div>
+        {{/if}}
+
+        {{#if this.makeupError}}
+          <div class="qd-buy-message error">
+            <span class="qd-buy-icon">❌</span>
+            <span class="qd-buy-text">{{this.makeupError}}</span>
+          </div>
+        {{/if}}
+
         <div class="qd-shop-section">
           <div class="qd-shop-header">
             <h4>💰 补签卡商店</h4>
@@ -158,9 +172,6 @@
                 <span class="qd-record-points">+{{r.points}} 分</span>
                 <span class="qd-record-makeup">{{if r.makeup "补签" "正常"}}</span>
                 <span class="qd-record-streak">连续：{{r.streak_count}} 天</span>
-                {{#if r.signed_at}}
-                  <span class="qd-record-time">{{r.signed_at}}</span>
-                {{/if}}
               </li>
             {{/each}}
           </ul>
@@ -176,6 +187,26 @@
     </div>
   </div>
 </div>
+
+{{!-- 补签确认弹窗 --}}
+{{#if this.showMakeupConfirm}}
+  <div class="qd-confirm-modal">
+    <div class="qd-confirm-content">
+      <h3>确认补签</h3>
+      <p>确定补签 <strong>{{this.selectedMakeupDate}}</strong> 吗？将消耗 <strong>1 张补签卡</strong>。</p>
+      <p class="qd-confirm-note">补签仅在系统启用日之后有效，得分按设置比例计算</p>
+
+      <div class="qd-confirm-buttons">
+        <button class="qd-confirm-cancel" {{on "click" this.cancelMakeupConfirm}} disabled={{this.isLoading}}>
+          取消
+        </button>
+        <button class="qd-confirm-ok" {{on "click" this.confirmMakeupSign}} disabled={{this.isLoading}}>
+          {{#if this.isLoading}}处理中...{{else}}确认补签{{/if}}
+        </button>
+      </div>
+    </div>
+  </div>
+{{/if}}
 
 {{!-- 购买补签卡确认弹窗 --}}
 {{#if this.showBuyConfirm}}

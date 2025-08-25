@@ -1,4 +1,9 @@
 jifen:
+  jifen_makeup_ratio_percent:
+    default: 100
+    client: false
+    description: "补签积分占基础积分的百分比（0-100）。例如基础积分 8 分、设置 50 则补签得 4 分；默认 100 表示与正常签到相同。"
+
   jifen_enabled:
     default: true
     client: true

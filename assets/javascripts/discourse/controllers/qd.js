@@ -24,6 +24,12 @@ export default class QdController extends Controller {
   @tracked buyMessage = null;
   @tracked buyError = null;
 
+  // 补签确认与反馈
+  @tracked showMakeupConfirm = false;
+  @tracked selectedMakeupDate = null;
+  @tracked makeupMessage = null;
+  @tracked makeupError = null;
+
   // 奖励提示文本（基于设置中的 JSON 连续奖励与当前连续天数）
   get rewardText() {
     const rewards = this.model?.rewards || {};
@@ -115,14 +121,49 @@ export default class QdController extends Controller {
     }
   }
 
-  // 补签（占位）
+  // 补签：先弹出确认，不直接提交
   @action
   async makeupSign(date) {
+    this.openMakeupConfirm(date);
+  }
+
+  @action
+  openMakeupConfirm(date) {
+    this.selectedMakeupDate = date;
+    this.makeupMessage = null;
+    this.makeupError = null;
+    this.showMakeupConfirm = true;
+  }
+
+  @action
+  cancelMakeupConfirm() {
+    this.showMakeupConfirm = false;
+  }
+
+  @action
+  async confirmMakeupSign() {
+    if (this.isLoading) return;
+    this.isLoading = true;
+    this.makeupMessage = null;
+    this.makeupError = null;
     try {
-      await ajax("/qd/makeup.json", { type: "POST", data: { date } });
-      await this.loadRecords();
-    } catch {
-      // 占位
+      const data = await ajax("/qd/makeup.json", {
+        type: "POST",
+        data: { date: this.selectedMakeupDate }
+      });
+      // 应用后端最新概览（可用积分、补签卡数、连续天数等）
+      this.model = data;
+      // 优先使用 summary 携带的 recent_records，避免额外请求
+      this.records = Array.isArray(data.recent_records) ? data.recent_records : [];
+      // 重新计算“可补签日期”（已包含启用日过滤）
+      this.missingDays = this._computeRecentMissingDays(this.records);
+      this.makeupMessage = `补签成功：${this.selectedMakeupDate} 已补签（消耗 1 张补签卡）`;
+      this.showMakeupConfirm = false;
+    } catch (e) {
+      this.makeupError =
+        (e?.jqXHR?.responseJSON?.errors?.[0]) || e?.message || "补签失败";
+    } finally {
+      this.isLoading = false;
     }
   }
 

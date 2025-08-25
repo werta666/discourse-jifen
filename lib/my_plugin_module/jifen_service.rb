@@ -245,8 +245,11 @@ module ::MyPluginModule
       cards = makeup_cards(user)
       raise StandardError, "补签卡不足" if cards <= 0
 
-      # 补签默认仅给予基础积分，不叠加连续奖励，避免复杂跨日连贯重算
-      pts = base_points
+      # 补签得分 = 基础积分 * 比例（0-100%），默认 100%
+      ratio = SiteSetting.respond_to?(:jifen_makeup_ratio_percent) ? SiteSetting.jifen_makeup_ratio_percent.to_i : 100
+      ratio = 0 if ratio < 0
+      ratio = 100 if ratio > 100
+      pts = (base_points * ratio / 100)
 
       ActiveRecord::Base.transaction do
         # 扣 1 张补签卡

@@ -562,6 +562,28 @@
   }
 }
 
+/* 全局反馈条样式（成功/失败），用于补签/购买等操作 */
+.qd-buy-message {
+  margin-top: 12px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  animation: fadeIn 0.3s ease-in-out;
+}
+.qd-buy-message.success {
+  background: rgba(76, 175, 80, 0.2);
+  border: 1px solid rgba(76, 175, 80, 0.4);
+  color: var(--success);
+}
+.qd-buy-message.error {
+  background: rgba(244, 67, 54, 0.2);
+  border: 1px solid rgba(244, 67, 54, 0.4);
+  color: var(--danger);
+}
+.qd-buy-icon { margin-right: 8px; font-size: 14px; }
+.qd-buy-text { font-size: 12px; }
+
 // 购买确认弹窗
 .qd-confirm-modal {
   position: fixed;
